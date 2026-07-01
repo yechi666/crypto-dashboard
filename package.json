@@ -14,6 +14,8 @@
     "build": "npm run build -w server && npm run build -w client",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "pretest": "npm run typecheck",
     "test": "npm run test:server && npm run test:client",
     "test:server": "vitest run --root server",
     "test:client": "npm run test -w client",

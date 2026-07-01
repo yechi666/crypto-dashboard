@@ -16,11 +16,12 @@ ask the user; the decisions made in response to it are recorded in
 
 ## Current state
 
-**This is boilerplate.** Structure, tooling, and the Prisma schema are in
-place. No feature logic exists yet: no CoinCap client, no polling loop, no
-SSE endpoint, no REST routes beyond `/api/health`, no dashboard UI beyond the
-stock Vite template. Look for `TODO` comments in `server/src/app.ts` and
-`server/src/index.ts` for where the real logic plugs in.
+**The feature set is implemented.** The CoinCap client and shared poll loop,
+startup history backfill, SSE push (`/api/events`) with REST-polling
+fallback, `FetchLog`-derived freshness, and the React dashboard + per-coin
+detail/history UI all exist, are wired up in `server/src/app.ts` /
+`server/src/index.ts`, and are covered by tests. The stack is also fully
+containerized — `docker compose up` runs Postgres + server + client.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before implementing
 anything — it lays out the intended design (single shared poll loop, SSE push

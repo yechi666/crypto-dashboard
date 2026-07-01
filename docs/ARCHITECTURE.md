@@ -2,8 +2,9 @@
 
 This document records the design decisions for the Crypto Market Dashboard and
 the reasoning behind them. It's the answer to "be ready to justify it" from the
-assessment brief. Nothing here is implemented yet — this is the plan the
-boilerplate was built to support.
+assessment brief. Everything described here is implemented — the poll loop,
+backfill, SSE + REST, freshness derivation, and dashboard/detail UI all exist
+in `server/src` and `client/src` as described below.
 
 ## Domain
 
@@ -42,7 +43,8 @@ default 30s) regardless of how many clients are connected.** Every poll:
 1. Fetches the top `TRACKED_COIN_COUNT` coins from CoinCap (`GET /assets?limit=<N>`).
 2. Upserts each into the `Coin` table (last-known-good snapshot).
 3. Inserts a `PriceHistory` row per coin (time series for the detail view).
-4. Prunes `PriceHistory` rows older than `HISTORY_RETENTION_HOURS`.
+4. Soft-prunes `PriceHistory` rows older than `HISTORY_RETENTION_HOURS` (sets
+   `deletedAt`; see below — this is not a hard delete).
 5. Writes a `FetchLog` row recording success/failure.
 
 This is the "single shared refresh loop" the brief asks for: rate-limit
@@ -84,6 +86,20 @@ double path (push when possible, pull as a fallback) is what makes "the user
 must always be looking at the most up-to-date data available" hold even when
 the live channel is unhealthy — the fallback still hits the server's cached
 DB data, never CoinCap directly.
+
+**Client-side staleness watchdog: the freshness badge trusts the clock, not
+just the socket.** An `EventSource` can report itself as "open" while
+silently delivering nothing — a proxy that buffers the response, a server
+that stopped writing without closing the connection, etc. — so the client
+doesn't treat "the SSE connection is open" as proof of freshness. Instead it
+tracks the wall-clock time of the last snapshot it actually received; if
+`VITE_STALE_AFTER_MS` elapses with no new snapshot, the client marks itself
+stale and forces the REST polling fallback (`GET /api/coins`) regardless of
+what the socket's readyState claims. This means the two failure modes — "the
+server has no fresh data" (surfaced via the API's `live`/`stale`/`error`
+status) and "the push channel stopped delivering" (surfaced via this
+watchdog) — are detected independently, so a silently-stalled SSE connection
+can't masquerade as a live dashboard.
 
 **Alternatives considered:**
 - *Per-client polling of CoinCap* — rejected outright, violates "don't make
@@ -128,12 +144,41 @@ last-known-good data, and powering history.
 
 - **`Coin`** — one row per coin, upserted every poll. This is the read model
   for the live dashboard and doubles as the last-known-good cache.
-- **`PriceHistory`** — append-only time series, one row per coin per poll,
-  pruned after `HISTORY_RETENTION_HOURS`. Backs the "last hour" detail view,
-  read straight from Postgres, never from a fresh upstream call.
+- **`PriceHistory`** — append-only time series, one row per coin per poll.
+  Backs the "last hour" detail view, read straight from Postgres, never from
+  a fresh upstream call.
 - **`FetchLog`** — one row per poll attempt. Exists specifically so
   staleness/error state is derived from real fetch history instead of
   inferred indirectly.
+
+**`PriceHistory` retention is a soft delete, not a hard delete.** Rows older
+than `HISTORY_RETENTION_HOURS` get `deletedAt` set to the current time rather
+than being `DELETE`d; every read path (`coinRepo`, `backfill`'s "does this
+coin already have history" check) filters `WHERE deletedAt IS NULL`. This is
+a deliberate tradeoff: soft-deleted rows stay recoverable (useful for
+debugging a "why did the sparkline look wrong an hour ago" question, or for
+resurrecting data if `HISTORY_RETENTION_HOURS` turns out to have been set too
+aggressively) at the cost of the table growing unbounded — nothing in this
+codebase ever issues a real `DELETE` against `PriceHistory`. That's fine for
+a take-home running for hours or days, but a real deployment would need a
+separate hard-purge/archival job (e.g. a nightly batch that `DELETE`s or
+archives rows where `deletedAt` is older than some grace period) to keep the
+table from growing forever. That job is explicitly out of scope here — see
+"Known limitations" below.
+
+**`FetchLog` status lifecycle.** Each poll cycle writes to `FetchLog` twice,
+not once: a row is created with `status: PROCESSING` (and `startedAt`) at the
+*start* of the cycle, then updated to `SUCCEEDED` or `FAILED` (the
+`FetchStatus` enum) with `finishedAt` set once the cycle completes. The
+alternative — a single row written only at the end of a cycle — would be
+simpler but would lose crash visibility: if the process dies mid-fetch (e.g.
+an unhandled exception between the CoinCap call and the Postgres write),
+nothing would ever record that the cycle happened at all. With the
+two-phase write, a `FetchLog` row stuck in `PROCESSING` well past
+`POLL_INTERVAL_MS` is itself a diagnostic signal — a cycle that started and
+never finished — which is exactly the "graceful behavior when upstream is
+slow, rate-limited, or down" the brief asks for, extended to cover the
+poll loop crashing outright.
 
 **Why relational/Postgres over a NoSQL store:** the data is naturally
 tabular (fixed columns per coin), the access patterns are simple
@@ -168,10 +213,47 @@ more here than horizontal write scale we don't need at 20 coins / 30s polls.
 
 ## Known scope boundary
 
-This repository is currently **boilerplate only**: project structure, tooling,
-and the schema above are in place; the polling loop, SSE endpoint, REST
-routes, and dashboard UI are not yet implemented (see the `TODO` markers in
-`server/src/app.ts` and `server/src/index.ts`). Docker Compose provisions
-Postgres (and Adminer for inspection) for local dev; containerizing the
-Node/Vite processes themselves was left out to keep the boilerplate focused —
-`npm run dev` is the documented path to run both.
+The design above is fully implemented, not just planned: the poll loop
+(`server/src/services/refreshLoop.ts`), startup history backfill
+(`services/backfill.ts`), SSE push (`services/sse.ts`, `routes/events.ts`)
+with REST-polling fallback (`routes/coins.ts`), `FetchLog`-derived freshness
+(`services/freshness.ts`), and the React dashboard + per-coin history/detail
+page (`client/src`) all exist and are covered by tests (`server/tests`,
+`client/src/**/*.test.ts`).
+
+**The app is fully containerized.** `docker compose up` starts three
+services: Postgres, the Express server (built via `server/Dockerfile`,
+running `prisma migrate deploy` then the compiled server), and an nginx
+container (`client/Dockerfile`) that serves the built SPA and reverse-proxies
+`/api` (and the `/api/events` SSE stream) to the server container. This is
+the primary way to run the whole stack — see the README. `npm run dev`
+(client + server as local processes against a Dockerized Postgres) remains
+available as the faster local-development inner loop.
+
+## Known limitations / future work
+
+These are deliberate omissions, not things that were forgotten:
+
+- **No market-cap history.** `PriceHistory` stores `price` (and optionally
+  `volume24h`); it does not snapshot `marketCap` over time, so the detail
+  view can't chart market-cap trends, only price.
+- **No multi-provider failover.** CoinCap is the only upstream source. If
+  CoinCap itself has an extended outage, the app degrades to stale/error
+  state (as designed) rather than failing over to a second provider (e.g.
+  CoinGecko). Adding one would mean abstracting the provider interface
+  beyond `services/coincap.ts` and reconciling schema differences (e.g.
+  CoinGecko does provide absolute 24h price deltas and logo URLs, which
+  CoinCap does not).
+- **No hard-purge/archival job for soft-deleted `PriceHistory`.** As
+  described above, pruning only sets `deletedAt`; nothing ever issues a real
+  `DELETE`. A production deployment would need a scheduled job to actually
+  remove or archive old soft-deleted rows so the table doesn't grow
+  unbounded.
+- **The server's runtime container image is not lean.** `server/Dockerfile`
+  ships the full hoisted `node_modules` (including the Prisma CLI) into the
+  runtime image rather than a pruned production-only `node_modules`, because
+  the container's startup command runs `prisma migrate deploy` before
+  starting the server, and that requires the Prisma CLI to be present at
+  runtime. A leaner image would split migration and runtime into separate
+  stages/images (or run migrations from a one-off job/init container instead
+  of the app container's own entrypoint).

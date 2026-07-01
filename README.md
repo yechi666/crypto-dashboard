@@ -6,10 +6,6 @@ view. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design
 decisions and their justification, and [CLAUDE.md](CLAUDE.md) for the current
 state of the project.
 
-> **Status:** this is the project boilerplate — tooling, structure, and the
-> database schema are set up; the dashboard feature itself is not yet
-> implemented.
-
 ## Stack
 
 - **Client:** React + TypeScript + Vite
@@ -20,25 +16,47 @@ state of the project.
 
 ## Prerequisites
 
-- Node.js 20+
-- Docker Desktop (for Postgres via Docker Compose)
+- **Docker Desktop** — the primary path below runs the whole stack (Postgres
+  + server + client) with one command.
+- **Node.js 20+** — only needed for the "Local development" path.
 
-## Setup
+## Running it (Docker, primary path)
 
 ```bash
-npm install
-
-# Start Postgres (+ Adminer at http://localhost:8080 for browsing the DB)
-docker compose up -d postgres
-
 # Copy env vars. Note: the example file is named `env.example` (no leading
 # dot) because this repo's tooling blocks writes to .env* files directly.
 cp env.example .env
 
-# Create the database tables from server/prisma/schema.prisma
+# Add your CoinCap API key to .env (see "Environment variables" below).
+# Compose reads COINCAP_API_KEY from .env automatically. The app degrades
+# gracefully (stale/error UI) if you skip this — see docs/ARCHITECTURE.md.
+
+docker compose up
+```
+
+Then open:
+
+- **http://localhost:8080** — the dashboard (nginx serving the built SPA,
+  reverse-proxying `/api` to the server)
+- **http://localhost:8081** — Adminer, for browsing the Postgres database
+- **http://localhost:4000** — the server API directly (health check, REST
+  routes, `/api/events` SSE stream)
+
+## Local development
+
+For a faster inner loop (hot reload on both client and server) without
+rebuilding Docker images on every change:
+
+```bash
+npm install
+
+# Start only Postgres (+ Adminer) in Docker
+docker compose up -d postgres
+
+cp env.example .env
 npm run prisma:migrate
 
-# Run client + server together (client on :5173, server on :4000)
+# Runs client + server together (client on :5173, server on :4000)
 npm run dev
 ```
 
@@ -48,9 +66,10 @@ Then open http://localhost:5173.
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Runs client and server in parallel |
-| `npm run build` | Type-checks and builds both workspaces |
-| `npm test` | Runs server and client test suites |
+| `npm run dev` | Runs client and server in parallel (local dev) |
+| `npm run build` | Builds both workspaces |
+| `npm run typecheck` | Typechecks both workspaces, including tests |
+| `npm test` | Runs server and client test suites (typechecks first via `pretest`) |
 | `npm run lint` | Lints both workspaces |
 | `npm run format` | Formats the repo with Prettier |
 | `npm run db:up` / `db:down` | Start/stop the Postgres container |

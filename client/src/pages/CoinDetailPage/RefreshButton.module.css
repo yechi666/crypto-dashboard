@@ -1,4 +1,9 @@
 .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 108px;
+  justify-content: center;
   padding: 8px 14px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -14,4 +19,18 @@
 .button:disabled {
   color: var(--muted);
   cursor: default;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

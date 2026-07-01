@@ -70,12 +70,22 @@ export function formatRelativeTime(iso: string | null, now: number = Date.now())
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return DASH;
   const diffSec = Math.max(0, Math.round((now - then) / 1000));
-  if (diffSec < 5) return "just now";
+  if (diffSec < 2) return "just now";
   if (diffSec < 60) return `${diffSec}s ago`;
   const min = Math.floor(diffSec / 60);
   if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
   return `${hr}h ago`;
+}
+
+/**
+ * Formats an ISO timestamp as a short clock time, e.g. "2:45 PM".
+ * Returns a dash for an invalid timestamp.
+ */
+export function formatClockTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return DASH;
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 /**

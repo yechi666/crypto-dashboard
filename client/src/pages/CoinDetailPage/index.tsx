@@ -67,7 +67,6 @@ export default function CoinDetailPage() {
   }
 
   const { coin, points } = data;
-  const values = points.map((p) => Number(p.price));
 
   return (
     <div className={styles.page}>
@@ -83,7 +82,9 @@ export default function CoinDetailPage() {
           <p className={styles.state}>No history yet.</p>
         ) : (
           <>
-            <Sparkline values={values} />
+            <Sparkline
+              points={points.map((p) => ({ value: Number(p.price), time: p.recordedAt }))}
+            />
             <HistoryStats points={points} />
           </>
         )}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   changeDirection,
   effectiveFreshness,
+  formatClockTime,
   formatCompactCurrency,
   formatCurrency,
   formatPercent,
@@ -110,6 +111,19 @@ describe("formatRelativeTime", () => {
 
   it("returns a dash for an invalid iso string", () => {
     expect(formatRelativeTime("not-a-date", now)).toBe("—");
+  });
+});
+
+describe("formatClockTime", () => {
+  it("returns a non-empty time string containing a digit for a valid iso string", () => {
+    const result = formatClockTime("2026-07-01T14:45:00.000Z");
+    expect(result).not.toBe("—");
+    expect(result).toMatch(/\d/);
+    expect(result).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it("returns a dash for an invalid iso string", () => {
+    expect(formatClockTime("not-a-date")).toBe("—");
   });
 });
 

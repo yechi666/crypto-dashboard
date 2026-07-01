@@ -1,3 +1,8 @@
+.container {
+  position: relative;
+  width: 100%;
+}
+
 .sparkline {
   display: block;
   width: 100%;
@@ -10,6 +15,46 @@
 
 .strokeDown {
   stroke: var(--down);
+}
+
+.overlay {
+  cursor: crosshair;
+}
+
+.guide {
+  stroke: var(--muted);
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+.dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  top: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.tooltipTime {
+  color: var(--muted);
+}
+
+.tooltipPrice {
+  font-weight: 600;
 }
 
 .placeholder {

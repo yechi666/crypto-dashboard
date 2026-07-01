@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.env
+.env.*
+.claude
+*.log
+server/prisma/*.db
+.vscode
+.idea
+*.swp

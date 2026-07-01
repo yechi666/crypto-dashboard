@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchCoinHistory, fetchCoins } from "./client";
 import type { CoinsResponse, CoinHistoryResponse } from "./types";
+import { HttpError } from "../utils/http";
 
 const sampleCoinsResponse: CoinsResponse = {
   status: "live",
@@ -64,7 +65,7 @@ describe("api client", () => {
     );
   });
 
-  it("fetchCoins() rejects with an Error including the status on non-ok response", async () => {
+  it("fetchCoins() rejects with an HttpError including the status on non-ok response", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -73,6 +74,8 @@ describe("api client", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(fetchCoins()).rejects.toThrow(/500/);
+    await expect(fetchCoins()).rejects.toBeInstanceOf(HttpError);
+    await expect(fetchCoins()).rejects.toMatchObject({ status: 500 });
   });
 
   it("fetchCoinHistory(id, minutes) returns parsed JSON and calls the URL with a query string", async () => {

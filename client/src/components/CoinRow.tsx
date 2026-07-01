@@ -1,5 +1,13 @@
+import type { KeyboardEvent } from "react";
+import { useNavigate } from "react-router-dom";
+
 import type { CoinDto } from "../api/types";
-import { changeDirection, formatCompactCurrency, formatCurrency, formatPercent } from "../utils/format";
+import {
+  changeDirection,
+  formatCompactCurrency,
+  formatCurrency,
+  formatPercent,
+} from "../utils/format";
 import styles from "./CoinRow.module.css";
 
 interface CoinRowProps {
@@ -7,8 +15,26 @@ interface CoinRowProps {
 }
 
 export default function CoinRow({ coin }: CoinRowProps) {
+  const navigate = useNavigate();
+
+  const goToDetail = () => navigate(`/coins/${coin.id}`);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      goToDetail();
+    }
+  };
+
   return (
-    <tr className={styles.row}>
+    <tr
+      className={styles.row}
+      onClick={goToDetail}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="link"
+      aria-label={`View ${coin.name} history`}
+    >
       <td className={styles.rank}>{coin.marketCapRank ?? "—"}</td>
       <td className={styles.nameCell}>
         <span className={styles.ticker}>{coin.symbol}</span>

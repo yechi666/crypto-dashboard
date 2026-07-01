@@ -1,0 +1,11 @@
+.state {
+  color: var(--muted);
+  text-align: center;
+  padding: 48px 0;
+}
+
+.stateError {
+  color: var(--down);
+  text-align: center;
+  padding: 48px 0;
+}

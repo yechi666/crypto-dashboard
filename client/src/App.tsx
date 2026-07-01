@@ -1,6 +1,9 @@
-import CoinTable from "./components/CoinTable";
+import { Link, Route, Routes } from "react-router-dom";
+
 import FreshnessBadge from "./components/FreshnessBadge";
 import { useCoinsStream } from "./hooks/useCoinsStream";
+import CoinDetailPage from "./pages/CoinDetailPage";
+import DashboardPage from "./pages/DashboardPage";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -9,7 +12,9 @@ export default function App() {
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Crypto Dashboard</h1>
+        <Link to="/" className={styles.title}>
+          Crypto Dashboard
+        </Link>
         <FreshnessBadge
           status={status}
           connection={connection}
@@ -17,15 +22,21 @@ export default function App() {
         />
       </header>
       <main className={styles.main}>
-        {coins.length > 0 ? (
-          <CoinTable coins={coins} />
-        ) : isLoading ? (
-          <p className={styles.state}>Loading market data…</p>
-        ) : error ? (
-          <p className={styles.stateError}>Couldn’t load data: {error}</p>
-        ) : (
-          <p className={styles.state}>No coins to display.</p>
-        )}
+        <Routes>
+          <Route
+            path="/"
+            element={<DashboardPage coins={coins} isLoading={isLoading} error={error} />}
+          />
+          <Route path="/coins/:id" element={<CoinDetailPage />} />
+          <Route
+            path="*"
+            element={
+              <p className={styles.state}>
+                Page not found. <Link to="/">Go home</Link>
+              </p>
+            }
+          />
+        </Routes>
       </main>
     </div>
   );

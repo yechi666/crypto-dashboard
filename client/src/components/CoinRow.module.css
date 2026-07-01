@@ -1,8 +1,15 @@
 .row {
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
 }
 
 .row:hover {
+  background: var(--surface-hover);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
   background: var(--surface-hover);
 }
 

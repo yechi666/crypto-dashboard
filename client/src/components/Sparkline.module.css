@@ -1,0 +1,24 @@
+.sparkline {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.strokeUp {
+  stroke: var(--up);
+}
+
+.strokeDown {
+  stroke: var(--down);
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 120px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}

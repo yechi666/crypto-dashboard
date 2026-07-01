@@ -1,7 +1,7 @@
 /**
  * Resolve the `since` cutoff for a history query from a raw ?minutes value.
  * Defaults to 60 minutes when absent/invalid/non-positive; clamps to maxMinutes
- * (the retention window). `now` is injectable for deterministic tests.
+ * (the max lookback window). `now` is injectable for deterministic tests.
  */
 export function resolveHistorySince(
   rawMinutes: unknown,

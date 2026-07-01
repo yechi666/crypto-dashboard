@@ -35,7 +35,7 @@ export async function countByCoin(coinId: string): Promise<number> {
 
 /**
  * Ascending-time price history for a coin since `since` (a recordedAt window).
- * The history route clamps the window to <= HISTORY_RETENTION_HOURS. Backs the
+ * The history route clamps the window to <= HISTORY_MAX_LOOKBACK_HOURS. Backs the
  * per-coin history detail view.
  */
 export async function findByCoinSince(coinId: string, since: Date) {

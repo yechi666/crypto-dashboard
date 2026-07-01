@@ -128,7 +128,7 @@ describe("GET /api/coins/:id/history", () => {
       expect(res.body.points[0].price).toBe("2");
     });
 
-    it("clamps an excessive minutes value to the retention window instead of erroring", async () => {
+    it("clamps an excessive minutes value to the max lookback window instead of erroring", async () => {
       const coin = await seedCoin({ id: "dogecoin" });
       await prisma.priceHistory.createMany({
         data: [
@@ -141,8 +141,8 @@ describe("GET /api/coins/:id/history", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.points).toHaveLength(2);
-      // sanity: retention window is finite and configured via env
-      expect(env.HISTORY_RETENTION_HOURS).toBeGreaterThan(0);
+      // sanity: max lookback window is finite and configured via env
+      expect(env.HISTORY_MAX_LOOKBACK_HOURS).toBeGreaterThan(0);
     });
   });
 });

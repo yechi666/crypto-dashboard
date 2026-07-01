@@ -8,7 +8,7 @@ const envSchema = z.object({
   POLL_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
   COIN_COUNT: z.coerce.number().int().positive().default(20),
   STALE_AFTER_INTERVALS: z.coerce.number().positive().default(2),
-  HISTORY_RETENTION_HOURS: z.coerce.number().int().positive().default(24),
+  HISTORY_MAX_LOOKBACK_HOURS: z.coerce.number().int().positive().default(24),
   COINCAP_API_KEY: z.string().optional().default(""),
   COINCAP_BASE_URL: z.string().url().default("https://rest.coincap.io/v3"),
   TRACKED_COIN_COUNT: z.coerce.number().int().positive().default(100),

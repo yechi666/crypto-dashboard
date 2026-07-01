@@ -25,7 +25,7 @@ coinsRouter.get("/:id/history", async (req, res, next) => {
       return;
     }
 
-    const since = resolveHistorySince(req.query.minutes, env.HISTORY_RETENTION_HOURS * 60);
+    const since = resolveHistorySince(req.query.minutes, env.HISTORY_MAX_LOOKBACK_HOURS * 60);
 
     const points = await findByCoinSince(coin.id, since);
 

@@ -17,8 +17,9 @@ state of the project.
 ## Prerequisites
 
 - **Docker Desktop** — the primary path below runs the whole stack (Postgres
-  + server + client) with one command.
+  - server + client) with one command.
 - **Node.js 20+** — only needed for the "Local development" path.
+- **CoinCap Token** — go to [CoinCap Dashboard](https://pro.coincap.io/dashboard), sign in for free and create an API Key.
 
 ## Running it (Docker, primary path)
 
@@ -64,17 +65,17 @@ Then open http://localhost:5173.
 
 ## Useful scripts (run from repo root)
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Runs client and server in parallel (local dev) |
-| `npm run build` | Builds both workspaces |
-| `npm run typecheck` | Typechecks both workspaces, including tests |
-| `npm test` | Runs server and client test suites (typechecks first via `pretest`) |
-| `npm run lint` | Lints both workspaces |
-| `npm run format` | Formats the repo with Prettier |
-| `npm run db:up` / `db:down` | Start/stop the Postgres container |
-| `npm run prisma:migrate` | Apply Prisma migrations (dev) |
-| `npm run prisma:studio` | Open Prisma Studio to browse the DB |
+| Command                     | What it does                                                        |
+| --------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`               | Runs client and server in parallel (local dev)                      |
+| `npm run build`             | Builds both workspaces                                              |
+| `npm run typecheck`         | Typechecks both workspaces, including tests                         |
+| `npm test`                  | Runs server and client test suites (typechecks first via `pretest`) |
+| `npm run lint`              | Lints both workspaces                                               |
+| `npm run format`            | Formats the repo with Prettier                                      |
+| `npm run db:up` / `db:down` | Start/stop the Postgres container                                   |
+| `npm run prisma:migrate`    | Apply Prisma migrations (dev)                                       |
+| `npm run prisma:studio`     | Open Prisma Studio to browse the DB                                 |
 
 ## Environment variables
 

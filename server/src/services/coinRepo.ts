@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import type { UpstreamCoin } from "./coincap.js";
 
@@ -38,4 +39,15 @@ export function coinUpsertOps(
       },
     }),
   );
+}
+
+/**
+ * The top env.COIN_COUNT coins by market cap rank — what /api/coins serves.
+ * Reads only from our own database; never calls the upstream provider.
+ */
+export async function getDisplayCoins() {
+  return prisma.coin.findMany({
+    orderBy: { marketCapRank: { sort: "asc", nulls: "last" } },
+    take: env.COIN_COUNT,
+  });
 }

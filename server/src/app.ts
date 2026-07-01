@@ -5,6 +5,7 @@ import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { coinsRouter } from "./routes/coins.js";
 
 export function createApp() {
   const app = express();
@@ -18,8 +19,9 @@ export function createApp() {
     res.json({ status: "ok" });
   });
 
-  // TODO: mount feature routes here, e.g.
-  // app.use("/api/coins", coinsRouter);
+  app.use("/api/coins", coinsRouter);
+
+  // TODO: mount remaining feature routes here, e.g.
   // app.use("/api/events", eventsRouter);
 
   app.use(errorHandler);

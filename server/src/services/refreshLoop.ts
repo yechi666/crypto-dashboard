@@ -3,6 +3,7 @@ import { logger } from "../lib/logger.js";
 import { prisma } from "../lib/prisma.js";
 import { toErrorMessage } from "../utils/errors.js";
 import { fetchAssets, UpstreamError } from "./coincap.js";
+import { coinUpsertOps } from "./coinRepo.js";
 import { createProcessingLog, recordOutcome, type FetchLogOutcome } from "./fetchLog.js";
 
 let running = false;
@@ -30,32 +31,7 @@ export async function runRefreshCycle(): Promise<void> {
       const cutoff = new Date(Date.now() - env.HISTORY_RETENTION_HOURS * 60 * 60 * 1000);
 
       await prisma.$transaction([
-        ...snapshot.coins.map((c) =>
-          prisma.coin.upsert({
-            where: { id: c.id },
-            create: {
-              id: c.id,
-              symbol: c.symbol,
-              name: c.name,
-              currentPrice: c.currentPrice,
-              marketCap: c.marketCap,
-              marketCapRank: c.marketCapRank,
-              volume24h: c.volume24h,
-              priceChangePercentage24h: c.priceChangePercentage24h,
-              lastUpdatedUpstream: snapshot.timestamp,
-            },
-            update: {
-              symbol: c.symbol,
-              name: c.name,
-              currentPrice: c.currentPrice,
-              marketCap: c.marketCap,
-              marketCapRank: c.marketCapRank,
-              volume24h: c.volume24h,
-              priceChangePercentage24h: c.priceChangePercentage24h,
-              lastUpdatedUpstream: snapshot.timestamp,
-            },
-          }),
-        ),
+        ...coinUpsertOps(snapshot.coins, snapshot.timestamp),
         prisma.priceHistory.createMany({
           data: snapshot.coins.map((c) => ({
             coinId: c.id,

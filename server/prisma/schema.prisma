@@ -1,9 +1,9 @@
 // Schema notes (see docs/ARCHITECTURE.md for full reasoning):
 //
-// - Coin holds the latest known snapshot per coin (id = CoinGecko slug, e.g.
-//   "bitcoin"). This is what /api/coins serves — one row per coin, upserted
-//   every poll cycle. It IS the "last-known-good" data source when upstream
-//   is unavailable.
+// - Coin holds the latest known snapshot per coin (id = stable slug from the
+//   configured upstream provider, e.g. "bitcoin"). This is what /api/coins
+//   serves — one row per coin, upserted every poll cycle. It IS the
+//   "last-known-good" data source when upstream is unavailable.
 // - PriceHistory is an append-only time series, one row per coin per poll,
 //   pruned after HISTORY_RETENTION_HOURS. Powers the "last hour" detail view
 //   from the database, never from a fresh upstream call.
@@ -22,16 +22,15 @@ datasource db {
 }
 
 model Coin {
-  id                       String   @id // CoinGecko coin id, e.g. "bitcoin"
+  id                       String   @id // stable slug identifier from the configured upstream provider, e.g. "bitcoin"
   symbol                   String
   name                     String
-  image                    String?
-  currentPrice             Float
-  marketCap                Float
+  currentPrice             Decimal  @db.Decimal(24, 10)
+  marketCap                Decimal  @db.Decimal(24, 2)
   marketCapRank            Int?
-  priceChange24h           Float?
-  priceChangePercentage24h Float?
-  lastUpdatedUpstream      DateTime // timestamp CoinGecko reported for this data
+  volume24h                Decimal? @db.Decimal(24, 2)
+  priceChangePercentage24h Decimal? @db.Decimal(10, 4)
+  lastUpdatedUpstream      DateTime // timestamp the upstream provider reported for this data
   updatedAt                DateTime @updatedAt // when WE last wrote this row
 
   history PriceHistory[]
@@ -43,15 +42,17 @@ model PriceHistory {
   id         Int      @id @default(autoincrement())
   coinId     String
   coin       Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
-  price      Float
-  marketCap  Float?
+  price      Decimal  @db.Decimal(24, 10)
+  volume24h  Decimal? @db.Decimal(24, 2)
   recordedAt DateTime @default(now())
 
   @@index([coinId, recordedAt])
+  @@index([recordedAt])
 }
 
 model FetchLog {
   id           Int       @id @default(autoincrement())
+  source       String    // which upstream provider this attempt hit, e.g. "coincap"
   startedAt    DateTime  @default(now())
   finishedAt   DateTime?
   success      Boolean

@@ -8,18 +8,21 @@
     "client"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
-    "dev:server": "npm run dev -w server",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "tsx watch --tsconfig server/tsconfig.json server/src/index.ts",
     "dev:client": "npm run dev -w client",
     "build": "npm run build -w server && npm run build -w client",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "npm run test -w server && npm run test -w client",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "vitest run --root server",
+    "test:client": "npm run test -w client",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
-    "prisma:migrate": "npm run prisma:migrate -w server",
-    "prisma:generate": "npm run prisma:generate -w server",
-    "prisma:studio": "npm run prisma:studio -w server"
+    "prisma:migrate": "prisma migrate dev --schema server/prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema server/prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema server/prisma/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy --schema server/prisma/schema.prisma"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

@@ -1,0 +1,56 @@
+.row {
+  border-bottom: 1px solid var(--border);
+}
+
+.row:hover {
+  background: var(--surface-hover);
+}
+
+.rank {
+  color: var(--muted);
+  text-align: right;
+  padding: 10px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.nameCell {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticker {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.name {
+  color: var(--text);
+}
+
+.numeric {
+  padding: 10px 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.neutral {
+  color: var(--muted);
+}

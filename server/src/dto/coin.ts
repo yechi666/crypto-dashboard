@@ -1,4 +1,4 @@
-import type { Coin } from "@prisma/client";
+import type { Coin, PriceHistory } from "@prisma/client";
 import type { FreshnessStatus } from "../services/freshness.js";
 
 export interface CoinDto {
@@ -33,5 +33,23 @@ export function toCoinDto(coin: Coin): CoinDto {
     priceChangePercentage24h: coin.priceChangePercentage24h,
     lastUpdatedUpstream: coin.lastUpdatedUpstream.toISOString(),
     updatedAt: coin.updatedAt.toISOString(),
+  };
+}
+
+export interface HistoryPointDto {
+  price: string;
+  recordedAt: string;
+}
+
+export interface CoinHistoryResponse {
+  coin: CoinDto;
+  points: HistoryPointDto[];
+}
+
+/** Map a Prisma PriceHistory row to its wire representation — Decimal must not leak past this boundary. */
+export function toHistoryPointDto(row: PriceHistory): HistoryPointDto {
+  return {
+    price: row.price.toString(),
+    recordedAt: row.recordedAt.toISOString(),
   };
 }

@@ -5,9 +5,8 @@ import { fetchCoins } from "../api/client";
 import { subscribeToCoins } from "../api/coinsStream";
 import type { ConnectionState } from "../api/coinsStream";
 import type { CoinDto, FreshnessStatus } from "../api/types";
+import { POLL_INTERVAL_MS } from "../config";
 import { toErrorMessage } from "../utils/errors";
-
-const POLL_MS = 15000;
 
 export interface CoinsStreamState {
   coins: CoinDto[];
@@ -26,7 +25,7 @@ export function useCoinsStream(): CoinsStreamState {
     queryKey: ["coins"],
     queryFn: ({ signal }) => fetchCoins(signal),
     // SSE is the primary transport; this is only a fallback while it's down.
-    refetchInterval: connection === "polling" ? POLL_MS : false,
+    refetchInterval: connection === "polling" ? POLL_INTERVAL_MS : false,
   });
 
   useEffect(() => {

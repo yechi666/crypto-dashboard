@@ -45,7 +45,6 @@ model PriceHistory {
   price      Decimal  @db.Decimal(24, 10)
   volume24h  Decimal? @db.Decimal(24, 2)
   recordedAt DateTime @default(now())
-  deletedAt  DateTime? // null = live row; set = soft-deleted (pruned past HISTORY_RETENTION_HOURS)
 
   @@index([coinId, recordedAt])
   @@index([recordedAt])

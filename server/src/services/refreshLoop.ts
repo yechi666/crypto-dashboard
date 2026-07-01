@@ -2,7 +2,11 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { runTransaction } from "../lib/prisma.js";
 import * as coinRepo from "../repositories/coinRepo.js";
-import { createProcessingLog, recordOutcome, type FetchLogOutcome } from "../repositories/fetchLogRepo.js";
+import {
+  createProcessingLog,
+  recordOutcome,
+  type FetchLogOutcome,
+} from "../repositories/fetchLogRepo.js";
 import * as priceHistoryRepo from "../repositories/priceHistoryRepo.js";
 import { toErrorMessage } from "../utils/errors.js";
 import { fetchAssets, UpstreamError } from "./coincap.js";
@@ -13,8 +17,8 @@ let running = false;
 
 /**
  * Runs a single poll cycle: fetch upstream assets, upsert Coin rows, append
- * PriceHistory rows, soft-delete history past the retention window, and
- * record the outcome in FetchLog. Never throws — a rejected promise here
+ * PriceHistory rows and record the outcome in FetchLog.
+ * Never throws — a rejected promise here
  * would otherwise take down the setInterval loop.
  */
 export async function runRefreshCycle(): Promise<void> {
@@ -31,12 +35,10 @@ export async function runRefreshCycle(): Promise<void> {
     let outcome: FetchLogOutcome;
     try {
       const snapshot = await fetchAssets();
-      const cutoff = new Date(Date.now() - env.HISTORY_RETENTION_HOURS * 60 * 60 * 1000);
 
       await runTransaction([
         ...coinRepo.coinUpsertOps(snapshot.coins, snapshot.timestamp),
         priceHistoryRepo.insertSnapshotOp(snapshot.coins, snapshot.timestamp),
-        priceHistoryRepo.softDeletePrunedOp(cutoff),
       ]);
 
       outcome = {

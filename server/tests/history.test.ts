@@ -80,22 +80,6 @@ describe("GET /api/coins/:id/history", () => {
     expect(res.body.coin.id).toBe(coin.id);
   });
 
-  it("excludes soft-deleted rows", async () => {
-    const coin = await seedCoin({ id: "solana" });
-    await prisma.priceHistory.createMany({
-      data: [
-        { coinId: coin.id, price: "10.00", recordedAt: minutesAgo(5), deletedAt: new Date() },
-        { coinId: coin.id, price: "20.00", recordedAt: minutesAgo(5) },
-      ],
-    });
-
-    const res = await request(createApp()).get(`/api/coins/${coin.id}/history`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.points).toHaveLength(1);
-    expect(res.body.points[0].price).toBe("20");
-  });
-
   describe("window filtering and clamping", () => {
     it("defaults to the last 60 minutes when no query param is given", async () => {
       const coin = await seedCoin({ id: "cardano" });

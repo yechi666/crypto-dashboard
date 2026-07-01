@@ -43,9 +43,7 @@ default 30s) regardless of how many clients are connected.** Every poll:
 1. Fetches the top `TRACKED_COIN_COUNT` coins from CoinCap (`GET /assets?limit=<N>`).
 2. Upserts each into the `Coin` table (last-known-good snapshot).
 3. Inserts a `PriceHistory` row per coin (time series for the detail view).
-4. Soft-prunes `PriceHistory` rows older than `HISTORY_RETENTION_HOURS` (sets
-   `deletedAt`; see below — this is not a hard delete).
-5. Writes a `FetchLog` row recording success/failure.
+4. Writes a `FetchLog` row recording success/failure.
 
 This is the "single shared refresh loop" the brief asks for: rate-limit
 exposure is constant no matter how many browser tabs are open, because the
@@ -73,6 +71,7 @@ empty for the duration of a short demo run.
 
 **The server pushes updates to clients over Server-Sent Events (SSE)** rather
 than WebSockets:
+
 - Data only flows server → client; there's no client → server real-time
   message to justify a bidirectional protocol.
 - `EventSource` reconnects automatically on drop, which is exactly the
@@ -102,12 +101,13 @@ watchdog) — are detected independently, so a silently-stalled SSE connection
 can't masquerade as a live dashboard.
 
 **Alternatives considered:**
-- *Per-client polling of CoinCap* — rejected outright, violates "don't make
+
+- _Per-client polling of CoinCap_ — rejected outright, violates "don't make
   a new external call for every user request."
-- *WebSockets* — viable, but adds protocol complexity (handshake, ping/pong,
+- _WebSockets_ — viable, but adds protocol complexity (handshake, ping/pong,
   reconnection logic) for a use case that's purely one-way. SSE gets the same
   outcome with less code.
-- *Client polls the server only (no SSE)* — simpler, but adds up to one full
+- _Client polls the server only (no SSE)_ — simpler, but adds up to one full
   poll interval of latency before a user sees new data, and doesn't
   demonstrate a push-based freshness strategy. Kept as the fallback, not the
   primary path.
@@ -119,7 +119,7 @@ its responses from that log, not from guessing based on `Coin.updatedAt`
 alone:
 
 - `live` — most recent `FetchLog` succeeded within `STALE_AFTER_INTERVALS *
-  POLL_INTERVAL_MS`.
+POLL_INTERVAL_MS`.
 - `stale` — last success is older than that window (CoinCap slow or rate
   limiting us), but we still have last-known-good rows in `Coin` to serve.
 - `error` — no successful fetch has ever completed, or failures have been
@@ -151,24 +151,9 @@ last-known-good data, and powering history.
   staleness/error state is derived from real fetch history instead of
   inferred indirectly.
 
-**`PriceHistory` retention is a soft delete, not a hard delete.** Rows older
-than `HISTORY_RETENTION_HOURS` get `deletedAt` set to the current time rather
-than being `DELETE`d; every read path (`coinRepo`, `backfill`'s "does this
-coin already have history" check) filters `WHERE deletedAt IS NULL`. This is
-a deliberate tradeoff: soft-deleted rows stay recoverable (useful for
-debugging a "why did the sparkline look wrong an hour ago" question, or for
-resurrecting data if `HISTORY_RETENTION_HOURS` turns out to have been set too
-aggressively) at the cost of the table growing unbounded — nothing in this
-codebase ever issues a real `DELETE` against `PriceHistory`. That's fine for
-a take-home running for hours or days, but a real deployment would need a
-separate hard-purge/archival job (e.g. a nightly batch that `DELETE`s or
-archives rows where `deletedAt` is older than some grace period) to keep the
-table from growing forever. That job is explicitly out of scope here — see
-"Known limitations" below.
-
 **`FetchLog` status lifecycle.** Each poll cycle writes to `FetchLog` twice,
 not once: a row is created with `status: PROCESSING` (and `startedAt`) at the
-*start* of the cycle, then updated to `SUCCEEDED` or `FAILED` (the
+_start_ of the cycle, then updated to `SUCCEEDED` or `FAILED` (the
 `FetchStatus` enum) with `finishedAt` set once the cycle completes. The
 alternative — a single row written only at the end of a cycle — would be
 simpler but would lose crash visibility: if the process dies mid-fetch (e.g.
@@ -244,11 +229,6 @@ These are deliberate omissions, not things that were forgotten:
   beyond `services/coincap.ts` and reconciling schema differences (e.g.
   CoinGecko does provide absolute 24h price deltas and logo URLs, which
   CoinCap does not).
-- **No hard-purge/archival job for soft-deleted `PriceHistory`.** As
-  described above, pruning only sets `deletedAt`; nothing ever issues a real
-  `DELETE`. A production deployment would need a scheduled job to actually
-  remove or archive old soft-deleted rows so the table doesn't grow
-  unbounded.
 - **The server's runtime container image is not lean.** `server/Dockerfile`
   ships the full hoisted `node_modules` (including the Prisma CLI) into the
   runtime image rather than a pruned production-only `node_modules`, because

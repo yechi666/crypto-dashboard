@@ -55,7 +55,6 @@ describe("runRefreshCycle", () => {
     expect(historyRows).toHaveLength(3);
     for (const row of historyRows) {
       expect(row.recordedAt.getTime()).toBe(timestamp.getTime());
-      expect(row.deletedAt).toBeNull();
     }
 
     const logs = await prisma.fetchLog.findMany();
@@ -78,49 +77,6 @@ describe("runRefreshCycle", () => {
 
     const coinRows = await prisma.coin.findMany();
     expect(coinRows).toHaveLength(0);
-  });
-
-  it("soft-deletes PriceHistory rows older than the retention window", async () => {
-    const oldRecordedAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
-
-    await prisma.coin.create({
-      data: {
-        id: "bitcoin",
-        symbol: "BTC",
-        name: "Bitcoin",
-        currentPrice: "40000.00",
-        marketCap: "900000000000.00",
-        marketCapRank: 1,
-        lastUpdatedUpstream: oldRecordedAt,
-      },
-    });
-    const oldHistory = await prisma.priceHistory.create({
-      data: {
-        coinId: "bitcoin",
-        price: "40000.00",
-        recordedAt: oldRecordedAt,
-        deletedAt: null,
-      },
-    });
-
-    const timestamp = new Date();
-    vi.mocked(coincap.fetchAssets).mockResolvedValueOnce(
-      makeSnapshot(
-        [makeCoin({ id: "bitcoin", marketCapRank: 1, currentPrice: "51000.00" })],
-        timestamp,
-      ),
-    );
-
-    await runRefreshCycle();
-
-    const oldRow = await prisma.priceHistory.findUniqueOrThrow({ where: { id: oldHistory.id } });
-    expect(oldRow.deletedAt).not.toBeNull();
-
-    const freshRows = await prisma.priceHistory.findMany({
-      where: { recordedAt: timestamp },
-    });
-    expect(freshRows).toHaveLength(1);
-    expect(freshRows[0]?.deletedAt).toBeNull();
   });
 
   it("persists priceChangePercentage24h values that would overflow Decimal(10,4)", async () => {

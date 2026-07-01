@@ -35,7 +35,7 @@ export async function runStartupBackfill(): Promise<BackfillSummary> {
     const failed: string[] = [];
 
     for (const coin of displayCoins) {
-      const existing = await priceHistoryRepo.countLiveByCoin(coin.id);
+      const existing = await priceHistoryRepo.countByCoin(coin.id);
 
       if (existing > 0) {
         skipped.push(coin.id);

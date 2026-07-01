@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { coinsRouter } from "./routes/coins.js";
+import { eventsRouter } from "./routes/events.js";
 
 export function createApp() {
   const app = express();
@@ -20,9 +21,7 @@ export function createApp() {
   });
 
   app.use("/api/coins", coinsRouter);
-
-  // TODO: mount remaining feature routes here, e.g.
-  // app.use("/api/events", eventsRouter);
+  app.use("/api/events", eventsRouter);
 
   app.use(errorHandler);
 

@@ -4,7 +4,9 @@ import { prisma } from "../lib/prisma.js";
 import { toErrorMessage } from "../utils/errors.js";
 import { fetchAssets, UpstreamError } from "./coincap.js";
 import { coinUpsertOps } from "./coinRepo.js";
+import { getCoinsSnapshot } from "./coinsSnapshot.js";
 import { createProcessingLog, recordOutcome, type FetchLogOutcome } from "./fetchLog.js";
+import { broadcast } from "./sse.js";
 
 let running = false;
 
@@ -59,6 +61,13 @@ export async function runRefreshCycle(): Promise<void> {
     }
 
     await recordOutcome(log?.id ?? null, startedAt, outcome);
+
+    try {
+      const snapshot = await getCoinsSnapshot();
+      broadcast("coins", snapshot);
+    } catch (error) {
+      logger.error({ err: error }, "failed to broadcast snapshot");
+    }
   } finally {
     running = false;
   }

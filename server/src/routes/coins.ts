@@ -1,24 +1,16 @@
 import { Router } from "express";
 import { env } from "../config/env.js";
 import { toCoinDto, toHistoryPointDto } from "../dto/coin.js";
-import type { CoinHistoryResponse, CoinsResponse } from "../dto/coin.js";
-import { getCoinById, getCoinHistory, getDisplayCoins } from "../services/coinRepo.js";
-import { computeFreshness } from "../services/freshness.js";
+import type { CoinHistoryResponse } from "../dto/coin.js";
+import { getCoinById, getCoinHistory } from "../services/coinRepo.js";
+import { getCoinsSnapshot } from "../services/coinsSnapshot.js";
 import { resolveHistorySince } from "../utils/history.js";
 
 export const coinsRouter = Router();
 
 coinsRouter.get("/", async (_req, res, next) => {
   try {
-    const [coins, freshness] = await Promise.all([getDisplayCoins(), computeFreshness()]);
-
-    const body: CoinsResponse = {
-      status: freshness.status,
-      lastSuccessfulFetchAt: freshness.lastSuccessfulFetchAt?.toISOString() ?? null,
-      coins: coins.map(toCoinDto),
-    };
-
-    res.json(body);
+    res.json(await getCoinsSnapshot());
   } catch (err) {
     next(err);
   }

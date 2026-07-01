@@ -1,4 +1,7 @@
-import type { HistoryPointDto } from "../api/types";
+import type { CoinDto, CoinHistoryResponse, HistoryPointDto } from "../api/types";
+
+// Matches the server's default history window and the "1h" stat labels in HistoryStats.
+const HISTORY_WINDOW_MS = 60 * 60 * 1000;
 
 export interface HistoryStats {
   latest: number | null;
@@ -47,4 +50,34 @@ export function buildSparklinePath(values: number[], width: number, height: numb
       return `${x},${y}`;
     })
     .join(" ");
+}
+
+/**
+ * Merge a live SSE snapshot into cached history: appends a new point derived
+ * from the live coin's current price, replaces `coin` so the header/"Latest"
+ * stat stay in sync, and trims points outside the rolling 1h window.
+ *
+ * Returns `prev` unchanged (same reference) when `timestamp` isn't newer than
+ * the last cached point, so callers (e.g. React Query's setQueryData) can
+ * skip a re-render.
+ */
+export function mergeLivePoint(
+  prev: CoinHistoryResponse,
+  liveCoin: CoinDto,
+  timestamp: string,
+): CoinHistoryResponse {
+  const lastPoint = prev.points[prev.points.length - 1];
+  const newTime = new Date(timestamp).getTime();
+
+  if (lastPoint && new Date(lastPoint.recordedAt).getTime() >= newTime) {
+    return prev;
+  }
+
+  const newPoint: HistoryPointDto = { price: liveCoin.currentPrice, recordedAt: timestamp };
+  const cutoff = newTime - HISTORY_WINDOW_MS;
+  const points = [...prev.points, newPoint].filter(
+    (p) => new Date(p.recordedAt).getTime() >= cutoff,
+  );
+
+  return { coin: liveCoin, points };
 }

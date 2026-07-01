@@ -27,7 +27,10 @@ export default function App() {
             path="/"
             element={<DashboardPage coins={coins} isLoading={isLoading} error={error} />}
           />
-          <Route path="/coins/:id" element={<CoinDetailPage />} />
+          <Route
+            path="/coins/:id"
+            element={<CoinDetailPage coins={coins} lastSuccessfulFetchAt={lastSuccessfulFetchAt} />}
+          />
           <Route
             path="*"
             element={

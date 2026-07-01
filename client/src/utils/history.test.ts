@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSparklinePath, historyStats } from "./history";
-import type { HistoryPointDto } from "../api/types";
+import { buildSparklinePath, historyStats, mergeLivePoint } from "./history";
+import type { CoinDto, CoinHistoryResponse, HistoryPointDto } from "../api/types";
 
 function point(price: string, recordedAt: string): HistoryPointDto {
   return { price, recordedAt };
+}
+
+function coin(overrides: Partial<CoinDto> = {}): CoinDto {
+  return {
+    id: "bitcoin",
+    symbol: "BTC",
+    name: "Bitcoin",
+    currentPrice: "100",
+    marketCap: "1000000",
+    marketCapRank: 1,
+    volume24h: "500000",
+    priceChangePercentage24h: 1.5,
+    lastUpdatedUpstream: "2026-07-01T10:00:00.000Z",
+    updatedAt: "2026-07-01T10:00:00.000Z",
+    ...overrides,
+  };
 }
 
 describe("historyStats", () => {
@@ -93,5 +109,66 @@ describe("buildSparklinePath", () => {
       expect(Number.isNaN(y)).toBe(false);
       expect(y).toBe(height / 2);
     }
+  });
+});
+
+describe("mergeLivePoint", () => {
+  it("appends a new point when the timestamp is newer than the last cached point", () => {
+    const prev: CoinHistoryResponse = {
+      coin: coin({ currentPrice: "100" }),
+      points: [point("100", "2026-07-01T10:00:00.000Z")],
+    };
+    const liveCoin = coin({ currentPrice: "105" });
+
+    const result = mergeLivePoint(prev, liveCoin, "2026-07-01T10:00:30.000Z");
+
+    expect(result).not.toBe(prev);
+    expect(result.points).toEqual([
+      point("100", "2026-07-01T10:00:00.000Z"),
+      point("105", "2026-07-01T10:00:30.000Z"),
+    ]);
+    expect(result.coin).toBe(liveCoin);
+  });
+
+  it("returns the same reference (no-op) when the timestamp equals the last cached point", () => {
+    const prev: CoinHistoryResponse = {
+      coin: coin(),
+      points: [point("100", "2026-07-01T10:00:00.000Z")],
+    };
+
+    const result = mergeLivePoint(prev, coin({ currentPrice: "999" }), "2026-07-01T10:00:00.000Z");
+
+    expect(result).toBe(prev);
+  });
+
+  it("returns the same reference (no-op) when the timestamp is older than the last cached point", () => {
+    const prev: CoinHistoryResponse = {
+      coin: coin(),
+      points: [point("100", "2026-07-01T10:00:00.000Z")],
+    };
+
+    const result = mergeLivePoint(prev, coin({ currentPrice: "999" }), "2026-07-01T09:59:00.000Z");
+
+    expect(result).toBe(prev);
+  });
+
+  it("trims points older than the rolling 1h window relative to the newest timestamp", () => {
+    const prev: CoinHistoryResponse = {
+      coin: coin(),
+      points: [
+        point("90", "2026-07-01T09:00:00.000Z"), // exactly 1h before the new point -> kept (>=)
+        point("95", "2026-07-01T08:59:59.000Z"), // 1h + 1s before -> dropped
+        point("98", "2026-07-01T09:30:00.000Z"),
+      ],
+    };
+    const liveCoin = coin({ currentPrice: "110" });
+
+    const result = mergeLivePoint(prev, liveCoin, "2026-07-01T10:00:00.000Z");
+
+    expect(result.points).toEqual([
+      point("90", "2026-07-01T09:00:00.000Z"),
+      point("98", "2026-07-01T09:30:00.000Z"),
+      point("110", "2026-07-01T10:00:00.000Z"),
+    ]);
   });
 });

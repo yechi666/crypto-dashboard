@@ -7,7 +7,8 @@ const DASH = "—";
  * Sub-$1 prices get extra fraction digits (up to 6) so sub-cent coins don't
  * all collapse to "$0.00".
  */
-export function formatCurrency(value: string | number): string {
+export function formatCurrency(value: string | number | null): string {
+  if (value === null) return DASH;
   const num = typeof value === "number" ? value : Number(value);
   if (Number.isNaN(num)) return DASH;
 

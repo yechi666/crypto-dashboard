@@ -87,8 +87,12 @@ describe("changeDirection", () => {
 describe("formatRelativeTime", () => {
   const now = new Date("2026-07-01T12:00:00.000Z").getTime();
 
-  it("returns 'just now' for less than 5 seconds ago", () => {
-    expect(formatRelativeTime(new Date(now - 3000).toISOString(), now)).toBe("just now");
+  it("returns 'just now' for under 2 seconds ago", () => {
+    expect(formatRelativeTime(new Date(now - 1000).toISOString(), now)).toBe("just now");
+  });
+
+  it("returns seconds ago at the 2-second boundary", () => {
+    expect(formatRelativeTime(new Date(now - 2000).toISOString(), now)).toBe("2s ago");
   });
 
   it("returns seconds ago for under a minute", () => {

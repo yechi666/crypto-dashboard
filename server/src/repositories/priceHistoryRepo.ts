@@ -34,11 +34,9 @@ export async function countByCoin(coinId: string): Promise<number> {
 }
 
 /**
- * Ascending-time price history for a coin since `since`. Pruned rows are
- * excluded implicitly: the history route clamps the window to
- * <= HISTORY_RETENTION_HOURS and the prune operation hard-deletes rows OLDER
- * than retention, so the recordedAt >= since window already excludes all
- * pruned rows. Backs the per-coin history detail view.
+ * Ascending-time price history for a coin since `since` (a recordedAt window).
+ * The history route clamps the window to <= HISTORY_RETENTION_HOURS. Backs the
+ * per-coin history detail view.
  */
 export async function findByCoinSince(coinId: string, since: Date) {
   return prisma.priceHistory.findMany({

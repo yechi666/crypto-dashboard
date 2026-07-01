@@ -4,9 +4,9 @@
 //   configured upstream provider, e.g. "bitcoin"). This is what /api/coins
 //   serves — one row per coin, upserted every poll cycle. It IS the
 //   "last-known-good" data source when upstream is unavailable.
-// - PriceHistory is an append-only time series, one row per coin per poll,
-//   pruned after HISTORY_RETENTION_HOURS. Powers the "last hour" detail view
-//   from the database, never from a fresh upstream call.
+// - PriceHistory is an append-only time series, one row per coin per poll.
+//   Powers the "last hour" detail view from the database (a recordedAt-window
+//   read), never from a fresh upstream call.
 // - FetchLog records every poll attempt (success or failure) so the API can
 //   report genuine staleness/error state instead of guessing from Coin rows
 //   alone (a Coin table with no failures looks identical to one that's 10

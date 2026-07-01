@@ -1,0 +1,37 @@
+{
+  "name": "crypto-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w server && npm run build -w client",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "npm run test -w server && npm run test -w client",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "prisma:migrate": "npm run prisma:migrate -w server",
+    "prisma:generate": "npm run prisma:generate -w server",
+    "prisma:studio": "npm run prisma:studio -w server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^15.12.0",
+    "prettier": "^3.3.3",
+    "typescript-eslint": "^8.15.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

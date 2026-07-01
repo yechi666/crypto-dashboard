@@ -1,0 +1,62 @@
+// Schema notes (see docs/ARCHITECTURE.md for full reasoning):
+//
+// - Coin holds the latest known snapshot per coin (id = CoinGecko slug, e.g.
+//   "bitcoin"). This is what /api/coins serves — one row per coin, upserted
+//   every poll cycle. It IS the "last-known-good" data source when upstream
+//   is unavailable.
+// - PriceHistory is an append-only time series, one row per coin per poll,
+//   pruned after HISTORY_RETENTION_HOURS. Powers the "last hour" detail view
+//   from the database, never from a fresh upstream call.
+// - FetchLog records every poll attempt (success or failure) so the API can
+//   report genuine staleness/error state instead of guessing from Coin rows
+//   alone (a Coin table with no failures looks identical to one that's 10
+//   minutes stale unless we track fetch attempts separately).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Coin {
+  id                       String   @id // CoinGecko coin id, e.g. "bitcoin"
+  symbol                   String
+  name                     String
+  image                    String?
+  currentPrice             Float
+  marketCap                Float
+  marketCapRank            Int?
+  priceChange24h           Float?
+  priceChangePercentage24h Float?
+  lastUpdatedUpstream      DateTime // timestamp CoinGecko reported for this data
+  updatedAt                DateTime @updatedAt // when WE last wrote this row
+
+  history PriceHistory[]
+
+  @@index([marketCapRank])
+}
+
+model PriceHistory {
+  id         Int      @id @default(autoincrement())
+  coinId     String
+  coin       Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  price      Float
+  marketCap  Float?
+  recordedAt DateTime @default(now())
+
+  @@index([coinId, recordedAt])
+}
+
+model FetchLog {
+  id           Int       @id @default(autoincrement())
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  success      Boolean
+  coinsUpdated Int?
+  errorMessage String?
+
+  @@index([startedAt])
+}

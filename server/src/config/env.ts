@@ -9,7 +9,10 @@ const envSchema = z.object({
   COIN_COUNT: z.coerce.number().int().positive().default(20),
   STALE_AFTER_INTERVALS: z.coerce.number().positive().default(2),
   HISTORY_RETENTION_HOURS: z.coerce.number().int().positive().default(24),
-  COINGECKO_API_KEY: z.string().optional().default(""),
+  COINCAP_API_KEY: z.string().optional().default(""),
+  COINCAP_BASE_URL: z.string().url().default("https://rest.coincap.io/v3"),
+  TRACKED_COIN_COUNT: z.coerce.number().int().positive().default(100),
+  UPSTREAM_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

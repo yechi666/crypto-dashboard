@@ -219,9 +219,8 @@ available as the faster local-development inner loop.
 
 These are deliberate omissions, not things that were forgotten:
 
-- **No market-cap history.** `PriceHistory` stores `price` (and optionally
-  `volume24h`); it does not snapshot `marketCap` over time, so the detail
-  view can't chart market-cap trends, only price.
+- **Backfill Logic won't work in a production env** - it was built to easily demonstrate the history page. A real prod app with multiple pods and auto scaling couldn't support a logic that happens each time the server is starting (relevant to the refresh logic also, see next point).
+- **Simple Client-Server Architecture** with a lot of users wanting the same data a cache like `Redis` will give quicker answers and less traffic to the DB. Also the external API refresh logic could be in a separate micro service that won't affect the main Server - separation between write and read logic.
 - **No multi-provider failover.** CoinCap is the only upstream source. If
   CoinCap itself has an extended outage, the app degrades to stale/error
   state (as designed) rather than failing over to a second provider (e.g.

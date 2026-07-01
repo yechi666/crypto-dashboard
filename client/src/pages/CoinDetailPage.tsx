@@ -156,7 +156,7 @@ export default function CoinDetailPage() {
                 </span>
               </div>
               <div className={styles.stat}>
-                <span className={styles.statLabel}>Change</span>
+                <span className={styles.statLabel}>1h Change</span>
                 <span className={`${styles.statValue} ${styles[changeDirection(stats.changePct)]}`}>
                   {formatPercent(stats.changePct)}
                 </span>

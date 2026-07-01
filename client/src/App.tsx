@@ -1,15 +1,20 @@
 import CoinTable from "./components/CoinTable";
+import FreshnessBadge from "./components/FreshnessBadge";
 import { useCoinsStream } from "./hooks/useCoinsStream";
 import styles from "./App.module.css";
 
 export default function App() {
-  const { coins, isLoading, error } = useCoinsStream();
+  const { coins, isLoading, error, status, connection, lastSuccessfulFetchAt } = useCoinsStream();
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <h1 className={styles.title}>Crypto Dashboard</h1>
-        {/* freshness badge slot — added in the next commit */}
+        <FreshnessBadge
+          status={status}
+          connection={connection}
+          lastSuccessfulFetchAt={lastSuccessfulFetchAt}
+        />
       </header>
       <main className={styles.main}>
         {coins.length > 0 ? (

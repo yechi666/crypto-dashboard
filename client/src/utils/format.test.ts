@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { changeDirection, formatCompactCurrency, formatCurrency, formatPercent } from "./format";
+import {
+  changeDirection,
+  effectiveFreshness,
+  formatCompactCurrency,
+  formatCurrency,
+  formatPercent,
+  formatRelativeTime,
+} from "./format";
 
 describe("formatCurrency", () => {
   it("formats a normal price with 2 fraction digits", () => {
@@ -73,5 +80,58 @@ describe("changeDirection", () => {
 
   it("returns 'neutral' for null", () => {
     expect(changeDirection(null)).toBe("neutral");
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const now = new Date("2026-07-01T12:00:00.000Z").getTime();
+
+  it("returns 'just now' for less than 5 seconds ago", () => {
+    expect(formatRelativeTime(new Date(now - 3000).toISOString(), now)).toBe("just now");
+  });
+
+  it("returns seconds ago for under a minute", () => {
+    expect(formatRelativeTime(new Date(now - 30000).toISOString(), now)).toBe("30s ago");
+  });
+
+  it("returns minutes ago for under an hour", () => {
+    expect(formatRelativeTime(new Date(now - 90000).toISOString(), now)).toBe("1m ago");
+  });
+
+  it("returns hours ago for an hour or more", () => {
+    expect(formatRelativeTime(new Date(now - 2 * 60 * 60 * 1000).toISOString(), now)).toBe(
+      "2h ago",
+    );
+  });
+
+  it("returns 'never' for null", () => {
+    expect(formatRelativeTime(null, now)).toBe("never");
+  });
+
+  it("returns a dash for an invalid iso string", () => {
+    expect(formatRelativeTime("not-a-date", now)).toBe("—");
+  });
+});
+
+describe("effectiveFreshness", () => {
+  it("returns 'live' when status is live and age is under the threshold", () => {
+    expect(effectiveFreshness("live", 1000, 60000)).toBe("live");
+  });
+
+  it("returns 'stale' when status is live but age exceeds the threshold", () => {
+    expect(effectiveFreshness("live", 60001, 60000)).toBe("stale");
+  });
+
+  it("returns 'error' regardless of age", () => {
+    expect(effectiveFreshness("error", 0, 60000)).toBe("error");
+    expect(effectiveFreshness("error", 999999, 60000)).toBe("error");
+  });
+
+  it("returns 'stale' when status is already stale", () => {
+    expect(effectiveFreshness("stale", 0, 60000)).toBe("stale");
+  });
+
+  it("stays as status at the exact threshold boundary (not stale, since it's strictly greater-than)", () => {
+    expect(effectiveFreshness("live", 60000, 60000)).toBe("live");
   });
 });

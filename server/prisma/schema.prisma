@@ -29,7 +29,7 @@ model Coin {
   marketCap                Decimal  @db.Decimal(24, 2)
   marketCapRank            Int?
   volume24h                Decimal? @db.Decimal(24, 2)
-  priceChangePercentage24h Decimal? @db.Decimal(10, 4)
+  priceChangePercentage24h Float?
   lastUpdatedUpstream      DateTime // timestamp the upstream provider reported for this data
   updatedAt                DateTime @updatedAt // when WE last wrote this row
 
@@ -45,19 +45,27 @@ model PriceHistory {
   price      Decimal  @db.Decimal(24, 10)
   volume24h  Decimal? @db.Decimal(24, 2)
   recordedAt DateTime @default(now())
+  deletedAt  DateTime? // null = live row; set = soft-deleted (pruned past HISTORY_RETENTION_HOURS)
 
   @@index([coinId, recordedAt])
   @@index([recordedAt])
 }
 
+enum FetchStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
 model FetchLog {
   id           Int       @id @default(autoincrement())
-  source       String    // which upstream provider this attempt hit, e.g. "coincap"
+  source       String // which upstream provider this attempt hit, e.g. "coincap"
   startedAt    DateTime  @default(now())
   finishedAt   DateTime?
-  success      Boolean
+  status       FetchStatus @default(PROCESSING)
   coinsUpdated Int?
   errorMessage String?
 
   @@index([startedAt])
+  @@index([status, startedAt])
 }

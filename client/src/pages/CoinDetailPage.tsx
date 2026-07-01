@@ -1,69 +1,31 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { fetchCoinHistory } from "../api/client";
-import type { CoinHistoryResponse } from "../api/types";
 import Sparkline from "../components/Sparkline";
+import { toErrorMessage } from "../utils/errors";
 import { changeDirection, formatCurrency, formatPercent } from "../utils/format";
 import { historyStats } from "../utils/history";
 import { HttpError } from "../utils/http";
 import styles from "./CoinDetailPage.module.css";
 
-interface CoinDetailState {
-  data: CoinHistoryResponse | null;
-  isLoading: boolean;
-  error: string | null;
-  notFound: boolean;
-}
-
 export default function CoinDetailPage() {
   const { id } = useParams();
 
-  const [state, setState] = useState<CoinDetailState>({
-    data: null,
-    isLoading: true,
-    error: null,
-    notFound: false,
+  const query = useQuery({
+    queryKey: ["coinHistory", id],
+    queryFn: ({ signal }) => fetchCoinHistory(id!, undefined, signal),
+    enabled: Boolean(id),
   });
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const load = useCallback(
-    async (signal: AbortSignal) => {
-      if (!id) return;
-      try {
-        const data = await fetchCoinHistory(id, undefined, signal);
-        if (signal.aborted) return;
-        setState({ data, isLoading: false, error: null, notFound: false });
-      } catch (err) {
-        if (signal.aborted) return;
-        if (err instanceof HttpError && err.status === 404) {
-          setState((prev) => ({ ...prev, isLoading: false, notFound: true, error: null }));
-        } else {
-          const message = err instanceof Error ? err.message : "Unknown error";
-          setState((prev) => ({ ...prev, isLoading: false, error: message }));
-        }
-      } finally {
-        if (!signal.aborted) setIsRefreshing(false);
-      }
-    },
-    [id],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setState({ data: null, isLoading: true, error: null, notFound: false });
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [id, load]);
 
   const handleRefresh = () => {
-    const controller = new AbortController();
-    setIsRefreshing(true);
-    void load(controller.signal);
+    void query.refetch();
   };
 
-  const { data, isLoading, error, notFound } = state;
+  const { data, error, isPending, isFetching } = query;
+  const notFound = error instanceof HttpError && error.status === 404;
+  const otherError = error && !notFound ? toErrorMessage(error) : null;
 
-  if (isLoading) {
+  if (isPending) {
     return <p className={styles.state}>Loading history…</p>;
   }
 
@@ -76,10 +38,10 @@ export default function CoinDetailPage() {
     );
   }
 
-  if (error) {
+  if (otherError) {
     return (
       <div className={styles.state}>
-        <p className={styles.stateError}>Couldn’t load history: {error}</p>
+        <p className={styles.stateError}>Couldn’t load history: {otherError}</p>
         <button type="button" className={styles.button} onClick={handleRefresh}>
           Retry
         </button>
@@ -124,9 +86,9 @@ export default function CoinDetailPage() {
           type="button"
           className={styles.button}
           onClick={handleRefresh}
-          disabled={isRefreshing}
+          disabled={isFetching}
         >
-          {isRefreshing ? "Refreshing…" : "Refresh"}
+          {isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 

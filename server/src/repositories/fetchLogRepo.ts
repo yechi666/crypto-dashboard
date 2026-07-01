@@ -47,3 +47,11 @@ export async function recordOutcome(
     logger.error({ err: e }, "failed to record FetchLog outcome");
   }
 }
+
+/** The most recent SUCCEEDED FetchLog row, if any — backs freshness computation. */
+export async function latestSuccess() {
+  return prisma.fetchLog.findFirst({
+    where: { status: "SUCCEEDED" },
+    orderBy: { startedAt: "desc" },
+  });
+}

@@ -1,6 +1,6 @@
 import type { CoinsResponse } from "../dto/coin.js";
 import { toCoinDto } from "../dto/coin.js";
-import { getDisplayCoins } from "./coinRepo.js";
+import { getDisplayCoins } from "../repositories/coinRepo.js";
 import { computeFreshness } from "./freshness.js";
 
 /**

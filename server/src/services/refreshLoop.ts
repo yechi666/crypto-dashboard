@@ -1,11 +1,12 @@
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
-import { prisma } from "../lib/prisma.js";
+import { runTransaction } from "../lib/prisma.js";
+import * as coinRepo from "../repositories/coinRepo.js";
+import { createProcessingLog, recordOutcome, type FetchLogOutcome } from "../repositories/fetchLogRepo.js";
+import * as priceHistoryRepo from "../repositories/priceHistoryRepo.js";
 import { toErrorMessage } from "../utils/errors.js";
 import { fetchAssets, UpstreamError } from "./coincap.js";
-import { coinUpsertOps } from "./coinRepo.js";
 import { getCoinsSnapshot } from "./coinsSnapshot.js";
-import { createProcessingLog, recordOutcome, type FetchLogOutcome } from "./fetchLog.js";
 import { broadcast } from "./sse.js";
 
 let running = false;
@@ -32,20 +33,10 @@ export async function runRefreshCycle(): Promise<void> {
       const snapshot = await fetchAssets();
       const cutoff = new Date(Date.now() - env.HISTORY_RETENTION_HOURS * 60 * 60 * 1000);
 
-      await prisma.$transaction([
-        ...coinUpsertOps(snapshot.coins, snapshot.timestamp),
-        prisma.priceHistory.createMany({
-          data: snapshot.coins.map((c) => ({
-            coinId: c.id,
-            price: c.currentPrice,
-            volume24h: c.volume24h,
-            recordedAt: snapshot.timestamp,
-          })),
-        }),
-        prisma.priceHistory.updateMany({
-          where: { recordedAt: { lt: cutoff }, deletedAt: null },
-          data: { deletedAt: new Date() },
-        }),
+      await runTransaction([
+        ...coinRepo.coinUpsertOps(snapshot.coins, snapshot.timestamp),
+        priceHistoryRepo.insertSnapshotOp(snapshot.coins, snapshot.timestamp),
+        priceHistoryRepo.softDeletePrunedOp(cutoff),
       ]);
 
       outcome = {

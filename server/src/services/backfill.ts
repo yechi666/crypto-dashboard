@@ -1,9 +1,10 @@
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
-import { prisma } from "../lib/prisma.js";
+import { runTransaction } from "../lib/prisma.js";
+import * as coinRepo from "../repositories/coinRepo.js";
+import * as priceHistoryRepo from "../repositories/priceHistoryRepo.js";
 import { toErrorMessage } from "../utils/errors.js";
 import { fetchAssets, fetchHistory } from "./coincap.js";
-import { coinUpsertOps } from "./coinRepo.js";
 
 export interface BackfillSummary {
   seeded: Array<{ id: string; points: number }>;
@@ -23,7 +24,7 @@ export async function runStartupBackfill(): Promise<BackfillSummary> {
     const snapshot = await fetchAssets();
     const displayCoins = snapshot.coins.slice(0, env.COIN_COUNT);
 
-    await prisma.$transaction(coinUpsertOps(displayCoins, snapshot.timestamp));
+    await runTransaction(coinRepo.coinUpsertOps(displayCoins, snapshot.timestamp));
 
     const end = Date.now();
     const start = end - 60 * 60 * 1000;
@@ -34,9 +35,7 @@ export async function runStartupBackfill(): Promise<BackfillSummary> {
     const failed: string[] = [];
 
     for (const coin of displayCoins) {
-      const existing = await prisma.priceHistory.count({
-        where: { coinId: coin.id, deletedAt: null },
-      });
+      const existing = await priceHistoryRepo.countLiveByCoin(coin.id);
 
       if (existing > 0) {
         skipped.push(coin.id);
@@ -49,13 +48,13 @@ export async function runStartupBackfill(): Promise<BackfillSummary> {
           empty.push(coin.id);
           continue;
         }
-        await prisma.priceHistory.createMany({
-          data: points.map((p) => ({
+        await priceHistoryRepo.insertMany(
+          points.map((p) => ({
             coinId: coin.id,
             price: p.price,
             recordedAt: p.recordedAt,
           })),
-        });
+        );
         seeded.push({ id: coin.id, points: points.length });
         logger.debug({ coinId: coin.id, points: points.length }, "backfilled coin history");
       } catch (error) {

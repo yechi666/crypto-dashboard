@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { prisma } from "../lib/prisma.js";
+import { latestSuccess } from "../repositories/fetchLogRepo.js";
 
 export type FreshnessStatus = "live" | "stale" | "error";
 
@@ -15,10 +15,7 @@ export interface Freshness {
  * docs/ARCHITECTURE.md).
  */
 export async function computeFreshness(): Promise<Freshness> {
-  const lastSuccess = await prisma.fetchLog.findFirst({
-    where: { status: "SUCCEEDED" },
-    orderBy: { startedAt: "desc" },
-  });
+  const lastSuccess = await latestSuccess();
 
   if (!lastSuccess) {
     return { status: "error", lastSuccessfulFetchAt: null };

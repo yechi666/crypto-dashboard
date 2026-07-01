@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
-import type { UpstreamCoin } from "./coincap.js";
+import type { UpstreamCoin } from "../services/coincap.js";
 
 /**
  * Build (but do not execute) prisma.coin.upsert operations for the given
@@ -55,15 +55,4 @@ export async function getDisplayCoins() {
 /** A single tracked coin by id, regardless of whether it's in the displayed set. */
 export async function getCoinById(id: string) {
   return prisma.coin.findUnique({ where: { id } });
-}
-
-/**
- * Ascending-time price history for a coin since `since`, excluding
- * soft-deleted (pruned) rows. Backs the per-coin history detail view.
- */
-export async function getCoinHistory(coinId: string, since: Date) {
-  return prisma.priceHistory.findMany({
-    where: { coinId, deletedAt: null, recordedAt: { gte: since } },
-    orderBy: { recordedAt: "asc" },
-  });
 }

@@ -6,6 +6,9 @@ assessment brief. Everything described here is implemented — the poll loop,
 backfill, SSE + REST, freshness derivation, and dashboard/detail UI all exist
 in `server/src` and `client/src` as described below.
 
+*New here? [Questions you probably have](QUESTIONS.md) is the quick "why is
+it built this way" FAQ; the sections below go deeper.*
+
 ## Domain
 
 **Crypto Market Dashboard** (the brief's recommended default): top ~20

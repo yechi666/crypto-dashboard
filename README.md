@@ -6,8 +6,6 @@ view. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design
 decisions and their justification, and [CLAUDE.md](CLAUDE.md) for the current
 state of the project.
 
-![Crypto Market Dashboard — live prices with a freshness indicator](docs/images/dashboard.png)
-
 _The live dashboard, showing top-20 coin prices alongside the freshness badge._
 
 ## Stack
@@ -89,8 +87,6 @@ that in practice:
   This shows the client trusts the clock, not just the socket. See
   "Client-side staleness watchdog" in
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-<!-- Optional: add docs/images/stale-badge.png showing the Offline/Stale state here -->
 
 - **Ingress protection (optional to trigger).** The server also guards
   itself: rapid repeated requests to `GET /api/coins` beyond the configured

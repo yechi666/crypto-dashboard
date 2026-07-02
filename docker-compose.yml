@@ -43,6 +43,16 @@ services:
     ports:
       - "4000:4000"
     restart: unless-stopped
+    # Readiness, deliberately — it's the more meaningful "can this container
+    # serve" signal, verifying both the process and DB reachability. Readiness
+    # is DB-only (no COINCAP_API_KEY dependency), so it won't report unhealthy
+    # forever without a key, and the server already depends_on postgres.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   client:
     build:

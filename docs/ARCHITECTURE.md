@@ -253,7 +253,15 @@ container (`client/Dockerfile`) that serves the built SPA and reverse-proxies
 `/api` (and the `/api/events` SSE stream) to the server container. This is
 the primary way to run the whole stack — see the README. `npm run dev`
 (client + server as local processes against a Dockerized Postgres) remains
-available as the faster local-development inner loop.
+available as the faster local-development inner loop. The server exposes
+three health endpoints: a liveness probe (`/api/health`, process-up only), a
+readiness probe (`/api/health/ready`, DB reachable — used by the compose
+healthcheck and by a k8s readiness probe / load balancer), and a freshness
+report (`/api/health/freshness`, the data-currency signal for
+monitoring/alerting). Readiness deliberately does NOT gate on data freshness:
+a pod with a reachable DB can still serve the graceful stale/error-state UI
+correctly, so a slow or failed upstream never ejects instances from the load
+balancer.
 
 ## Known limitations / future work
 

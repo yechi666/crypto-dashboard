@@ -7,6 +7,7 @@ import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { coinsRouter } from "./routes/coins.js";
 import { eventsRouter } from "./routes/events.js";
+import { healthRouter } from "./routes/health.js";
 
 export function createApp() {
   const app = express();
@@ -16,9 +17,7 @@ export function createApp() {
   app.use(express.json());
   app.use(pinoHttp({ logger }));
 
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
+  app.use("/api/health", healthRouter);
 
   app.use("/api/coins", coinsRouter);
   app.use("/api/events", eventsRouter);

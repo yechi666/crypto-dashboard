@@ -13,6 +13,9 @@ const envSchema = z.object({
   COINCAP_BASE_URL: z.string().url().default("https://rest.coincap.io/v3"),
   TRACKED_COIN_COUNT: z.coerce.number().int().positive().default(100),
   UPSTREAM_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  SSE_MAX_CLIENTS: z.coerce.number().int().positive().default(1000),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
 });
 
 const parsed = envSchema.safeParse(process.env);

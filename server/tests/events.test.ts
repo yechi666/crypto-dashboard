@@ -1,7 +1,9 @@
 import http from "node:http";
-import { describe, expect, it } from "vitest";
+import request from "supertest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { prisma } from "../src/lib/prisma.js";
+import * as sse from "../src/services/sse.js";
 import { broadcast } from "../src/services/sse.js";
 
 async function seedCoin(): Promise<void> {
@@ -76,5 +78,19 @@ describe("GET /api/events", () => {
       req.destroy();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("responds 503 with Retry-After when the SSE connection cap is reached", async () => {
+    vi.spyOn(sse, "isAtCapacity").mockReturnValue(true);
+
+    const res = await request(createApp()).get("/api/events");
+
+    expect(res.status).toBe(503);
+    expect(res.headers["retry-after"]).toBe("30");
+    expect(res.body).toEqual({ error: "server at SSE capacity, retry shortly" });
   });
 });

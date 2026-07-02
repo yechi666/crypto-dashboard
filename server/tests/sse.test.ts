@@ -1,6 +1,14 @@
 import type { Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addClient, broadcast, clientCount, removeClient, sendTo } from "../src/services/sse.js";
+import { env } from "../src/config/env.js";
+import {
+  addClient,
+  broadcast,
+  clientCount,
+  isAtCapacity,
+  removeClient,
+  sendTo,
+} from "../src/services/sse.js";
 
 interface FakeResponse {
   writes: string[];
@@ -98,5 +106,32 @@ describe("sse service", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("isAtCapacity is false with no clients connected and well below the configured cap", () => {
+    expect(clientCount()).toBe(0);
+    expect(env.SSE_MAX_CLIENTS).toBeGreaterThan(0);
+    expect(isAtCapacity()).toBe(false);
+  });
+
+  it("isAtCapacity flips to true once clientCount reaches SSE_MAX_CLIENTS", () => {
+    const fakes: FakeResponse[] = [];
+    try {
+      for (let i = 0; i < env.SSE_MAX_CLIENTS; i++) {
+        const fake = makeFakeClient();
+        fakes.push(fake);
+        addClient(fake as unknown as Response);
+      }
+
+      expect(clientCount()).toBe(env.SSE_MAX_CLIENTS);
+      expect(isAtCapacity()).toBe(true);
+    } finally {
+      for (const fake of fakes) {
+        removeClient(fake as unknown as Response);
+      }
+    }
+
+    expect(clientCount()).toBe(0);
+    expect(isAtCapacity()).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
 const HEARTBEAT_INTERVAL_MS = 15_000;
@@ -66,4 +67,9 @@ export function sendTo(res: Response, event: string, payload: unknown): void {
 /** Number of currently-connected SSE clients — for tests. */
 export function clientCount(): number {
   return clients.size;
+}
+
+/** Whether the server is already at (or above) its configured SSE connection cap. */
+export function isAtCapacity(): boolean {
+  return clients.size >= env.SSE_MAX_CLIENTS;
 }

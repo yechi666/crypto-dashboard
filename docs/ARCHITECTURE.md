@@ -222,6 +222,19 @@ more here than horizontal write scale we don't need at 20 coins / 30s polls.
   waits for the next tick — no retry storm against an already-struggling
   upstream.
 
+The above covers the *upstream* (CoinCap) side. The server also protects its
+own ingress from its own clients:
+
+- A cap on concurrent SSE connections (`SSE_MAX_CLIENTS`) — once reached,
+  `/api/events` responds `503` with `Retry-After` instead of opening a
+  stream, and the client's `EventSource` falls back to REST polling.
+- A per-IP rate limit on the REST API (`express-rate-limit`, mounted on
+  `/api/coins` only), keyed off the real client IP via `trust proxy` set to
+  the single nginx hop in front of the server.
+- Health probes (`/api/health*`) and the SSE stream itself are deliberately
+  not request-rate-limited — they're governed by the connection cap above
+  instead.
+
 ## Stack choices
 
 - **TypeScript** end to end (client + server) for a single type-safety story

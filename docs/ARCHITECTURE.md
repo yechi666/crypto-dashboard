@@ -6,8 +6,8 @@ assessment brief. Everything described here is implemented — the poll loop,
 backfill, SSE + REST, freshness derivation, and dashboard/detail UI all exist
 in `server/src` and `client/src` as described below.
 
-*New here? [Questions you probably have](QUESTIONS.md) is the quick "why is
-it built this way" FAQ; the sections below go deeper.*
+_New here? [Questions you probably have](QUESTIONS.md) is the quick "why is
+it built this way" FAQ; the sections below go deeper._
 
 ## Domain
 
@@ -114,6 +114,43 @@ can't masquerade as a live dashboard.
   poll interval of latency before a user sees new data, and doesn't
   demonstrate a push-based freshness strategy. Kept as the fallback, not the
   primary path.
+
+## One poll loop across many replicas: leader election
+
+The shared poll loop above assumes a _single_ writer. Run more than one server
+instance — horizontal scaling, or a rolling deploy that briefly overlaps old
+and new pods — and, naively, every instance would poll CoinCap and run the
+startup backfill independently: duplicate `PriceHistory` rows and N× the
+rate-limit burn.
+
+To keep exactly one active writer, each instance tries to become the leader at
+boot via a Postgres **session-level advisory lock** (`pg_try_advisory_lock`,
+`lib/leaderLock.ts`):
+
+- The instance that acquires the lock is the **leader**: it runs the startup
+  backfill and the refresh loop (`services/backgroundJobs.ts`).
+- Every other instance is a **follower**: it skips both and just serves API
+  reads from the shared database.
+
+Two details make this robust:
+
+- **The lock is held on a dedicated, single-connection Prisma client.** A
+  session advisory lock belongs to the exact connection that took it, but
+  Prisma's normal pool hands queries to arbitrary connections — so a lock taken
+  on the shared client could be silently dropped when that pooled connection
+  recycles, producing two leaders. Pinning it to its own `connection_limit=1`
+  client keeps the lock on one long-lived connection for the process's lifetime.
+- **Failover is automatic, with no heartbeat.** Because the lock is
+  session-scoped, Postgres releases it the moment the leader's connection closes
+  (the process crashes, the pod is killed, the deploy rolls). The next follower
+  to retry `pg_try_advisory_lock` then wins and takes over. On a graceful
+  `SIGTERM`/`SIGINT` shutdown the leader also releases the lock explicitly
+  (`releaseLeaderLock`) so a successor can pick up immediately instead of
+  waiting on connection teardown.
+
+A single instance (local dev, CI, a one-pod deploy) always wins the lock on the
+first try, so this is transparent there — it only matters once more than one
+instance runs.
 
 ## Handling upstream failure
 
@@ -222,7 +259,7 @@ available as the faster local-development inner loop.
 
 These are deliberate omissions, not things that were forgotten:
 
-- **Backfill Logic won't work in a production env** - it was built to easily demonstrate the history page. A real prod app with multiple pods and auto scaling couldn't support a logic that happens each time the server is starting (relevant to the refresh logic also, see next point).
+- **Backfill and refresh run inside the app process, on startup.** Both were built to run in-process rather than as a dedicated job, which doesn't fit autoscaled multi-pod deployments cleanly (the backfill is mainly to enable the history page for easier testing of the app). The [advisory-lock leader election](#one-poll-loop-across-many-replicas-leader-election) mitigates the multi-instance case today — only one elected leader runs them — but properly separating the refresh into its own writer service (see next bullet) remains the real fix.
 - **Simple Client-Server Architecture** with a lot of users wanting the same data a cache like `Redis` will give quicker answers and less traffic to the DB. Also the external API refresh logic could be in a separate micro service that won't affect the main Server - separation between write and read logic.
 - **No multi-provider failover.** CoinCap is the only upstream source. If
   CoinCap itself has an extended outage, the app degrades to stale/error
